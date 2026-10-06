@@ -1298,247 +1298,521 @@ POST      → ارسال/ایجاد
 این برای مسیر **Applied AI / AI Engineer / LLM Engineer** بسیار مهم‌تر از دانستن ده‌ها feature اضافی FastAPI است.
 
 
-# Practical Completion Checklist — Docker + FastAPI
+# Environment Variables
 
-Before moving to Docker Compose and n8n, I should be able to do the following **without copying the tutorial line by line**.
+Environment Variableها راهی برای دادن **configuration** به application هستند، بدون اینکه مقدار configuration را مستقیماً داخل source code قرار دهیم.
 
-## 🟢 Docker
-
-* [ ] I can explain the difference between an **image** and a **container**.
-* [ ] I can read a Dockerfile containing:
-
-  * [ ] `FROM`
-  * [ ] `WORKDIR`
-  * [ ] `COPY`
-  * [ ] `RUN`
-  * [ ] `CMD`
-* [ ] I can build an image:
-
-  ```bash
-  docker build -t my-app .
-  ```
-* [ ] I can run a container:
-
-  ```bash
-  docker run --name my-container my-app
-  ```
-* [ ] I understand why a container may show `Exited (0)`.
-* [ ] I can map a port:
-
-  ```bash
-  docker run -p 8000:8000 my-app
-  ```
-* [ ] I can check running and stopped containers:
-
-  ```bash
-  docker ps
-  docker ps -a
-  ```
-* [ ] I can view logs:
-
-  ```bash
-  docker logs my-container
-  ```
-* [ ] I can enter a running container:
-
-  ```bash
-  docker exec -it my-container bash
-  ```
-* [ ] I can stop, start, and remove a container:
-
-  ```bash
-  docker stop my-container
-  docker start my-container
-  docker rm my-container
-  ```
-
----
-
-## 🟢 HTTP / REST / API
-
-* [ ] I understand the difference between **API**, **HTTP API**, and **REST API**.
-* [ ] I know what these HTTP methods are generally used for:
-
-  * [ ] `GET`
-  * [ ] `POST`
-  * [ ] `PUT`
-  * [ ] `PATCH`
-  * [ ] `DELETE`
-* [ ] I understand the difference between:
-
-  * [ ] Path parameter → `/users/42`
-  * [ ] Query parameter → `/users?age=42`
-  * [ ] Request body → JSON sent with `POST`
-* [ ] I understand what JSON is.
-* [ ] I understand the basic meaning of common status codes:
-
-  * [ ] `200`
-  * [ ] `201`
-  * [ ] `400`
-  * [ ] `404`
-  * [ ] `422`
-  * [ ] `500`
-* [ ] I can send a GET request with `curl`.
-* [ ] I can send a POST request with JSON using:
-
-  ```bash
-  curl -X POST ... -H "Content-Type: application/json" -d '...'
-  ```
-
----
-
-## 🟢 FastAPI
-
-* [ ] I understand that **FastAPI is a Python framework for building APIs**.
-* [ ] I can create a basic FastAPI application.
-* [ ] I can create a `GET` endpoint.
-* [ ] I can create a `POST` endpoint.
-* [ ] I can use path parameters.
-* [ ] I can use query parameters.
-* [ ] I can define a request model with Pydantic:
-
-  ```python
-  class RequestModel(BaseModel):
-      ...
-  ```
-* [ ] I understand that FastAPI + Pydantic automatically validate incoming data.
-* [ ] I understand why incorrect input can produce `422`.
-* [ ] I can run FastAPI inside Docker.
-* [ ] I can access the API from outside the container.
-* [ ] I know where to find the automatically generated API documentation:
-
-  ```
-  /docs
-  ```
-
----
-
-## 🟢 AI Engineering Connection
-
-I should be able to explain this architecture in my own words:
+برای AI Engineering، مواردی مثل این‌ها معمولاً configuration هستند:
 
 ```text
-Python application
-       ↓
-    FastAPI
-       ↓
-   REST / HTTP
-       ↓
-   JSON request
-       ↓
- Docker container
-       ↓
-AI / LLM service
-```
-
-And I should understand that the same pattern will later allow me to build:
-
-```text
-n8n
-  ↓
-FastAPI
-  ↓
-AI / LLM
-  ↓
-result
-  ↓
-n8n
-  ↓
-action
+APP_ENV=development
+LLM_MODEL=gpt-5.6-mini
+OPENAI_API_KEY=...
+DATABASE_URL=...
 ```
 
 ---
 
-## 🟢 Practical Test
+## 1. خواندن Environment Variable در Python
 
-Without looking at the tutorial, I should be able to build a small service that:
+برای خواندن environment variable می‌توانیم از `os.getenv()` استفاده کنیم:
 
-* [ ] Has a FastAPI application.
-* [ ] Has `GET /hello`.
-* [ ] Has `POST /analyze`.
-* [ ] Accepts JSON such as:
+```python
+import os
 
-  ```json
-  {
-    "text": "Docker makes AI deployment easier."
-  }
-  ```
-* [ ] Returns at least:
+APP_ENV = os.getenv("APP_ENV", "development")
+```
 
-  ```json
-  {
-    "text": "...",
-    "length": 34
-  }
-  ```
-* [ ] Uses a Pydantic model for the request.
-* [ ] Runs successfully inside Docker.
-* [ ] Is accessible through:
+### `os.getenv()` چیست؟
 
-  ```text
-  http://localhost:8000
-  ```
-* [ ] Can be tested with both `curl` and `/docs`.
+```python
+os.getenv("APP_ENV", "development")
+```
+
+* `os` → ماژول استاندارد Python برای تعامل با operating system
+* `getenv()` → مقدار یک environment variable را می‌خواند.
+* `"APP_ENV"` → نام variable
+* `"development"` → مقدار پیش‌فرض (default)، اگر variable وجود نداشته باشد.
+
+مثلاً اگر:
+
+```text
+APP_ENV=production
+```
+
+وجود داشته باشد:
+
+```python
+os.getenv("APP_ENV", "development")
+```
+
+نتیجه:
+
+```text
+production
+```
+
+اگر وجود نداشته باشد:
+
+```text
+development
+```
 
 ---
 
-## 🟢 Troubleshooting Test
+## 2. چرا Environment Variable؟
 
-If something goes wrong, I should first be able to check:
+این کار مناسب نیست:
+
+```python
+OPENAI_API_KEY = "sk-xxxxxxxx"
+```
+
+چون secret/configuration را داخل source code قرار داده‌ایم.
+
+بهتر است:
+
+```python
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
+
+و مقدار را خارج از code تنظیم کنیم.
+
+مزیت مهم:
+
+**همان code/image می‌تواند با configurationهای مختلف اجرا شود.**
+
+مثلاً:
+
+```text
+Development:
+LLM_MODEL=gpt-5.6-mini
+
+Production:
+LLM_MODEL=gpt-5.6
+```
+
+بدون تغییر code.
+
+---
+
+# 3. تعریف Environment Variable در Docker
+
+هنگام اجرای container می‌توانیم از `-e` استفاده کنیم:
 
 ```bash
-docker ps
-docker ps -a
-docker logs <container>
+docker run -e APP_ENV=production my-app
 ```
 
-and understand whether the problem is likely related to:
+### `-e` چیست؟
 
-* [ ] container not running
-* [ ] application error
-* [ ] wrong port
-* [ ] wrong URL/path
-* [ ] invalid JSON
-* [ ] invalid input type
-* [ ] outdated Docker image after changing source code
+مخفف:
 
----
+```text
+--env
+```
 
-## 🟡 I Understand, But Don't Need to Master Yet
+یعنی یک environment variable داخل container ایجاد کن.
 
-* [ ] OpenAPI specification
-* [ ] Swagger UI internals
-* [ ] Uvicorn internals
-* [ ] Advanced Pydantic features
-* [ ] Advanced FastAPI dependency injection
-* [ ] Async programming details
-* [ ] Advanced HTTP semantics
+مثلاً:
 
-I only need enough understanding to use them effectively in an AI application.
+```bash
+docker run -e APP_ENV=production my-app
+```
 
----
+داخل container:
 
-## 🔴 Not Needed Yet
+```text
+APP_ENV=production
+```
 
-I do **not** need to study these at this stage:
-
-* [ ] Kubernetes
-* [ ] Docker Swarm
-* [ ] Advanced Docker networking
-* [ ] Advanced FastAPI architecture
-* [ ] Complex authentication systems
-* [ ] Enterprise DevOps
-* [ ] Advanced reverse-proxy configuration
-* [ ] Microservice architecture patterns
-
-These can wait until a real project requires them.
+وجود خواهد داشت.
 
 ---
 
-## Final Milestone
+# 4. استفاده از چند Environment Variable
 
-If I can complete the **Practical Test** above independently, I am ready to move on.
+می‌توانیم چند `-e` داشته باشیم:
 
-### Next step:
+```bash
+docker run \
+  -e APP_ENV=production \
+  -e LLM_MODEL=my-model \
+  my-app
+```
 
-**Docker Compose → n8n → connecting n8n to my FastAPI service → real AI/LLM workflow**
+هر:
+
+```text
+-e NAME=VALUE
+```
+
+یک environment variable تعریف می‌کند.
+
+---
+
+# 5. فایل `.env`
+
+وقتی تعداد variables زیاد شود، استفاده از `-e`های متعدد ناخوانا می‌شود.
+
+می‌توانیم یک فایل `.env` داشته باشیم:
+
+```env
+APP_ENV=production
+LLM_MODEL=my-test-model
+```
+
+ساختار:
+
+```text
+NAME=VALUE
+```
+
+معمولاً هر variable در یک خط.
+
+---
+
+# 6. دادن `.env` به Docker
+
+می‌توانیم کل فایل را با:
+
+```bash
+docker run --env-file .env my-app
+```
+
+به container بدهیم.
+
+### `--env-file`
+
+یعنی:
+
+> Environment variableهای تعریف‌شده در این فایل را به container منتقل کن.
+
+مثلاً:
+
+```bash
+docker run \
+  --env-file .env \
+  my-app
+```
+
+اگر `.env` شامل:
+
+```env
+APP_ENV=production
+LLM_MODEL=my-test-model
+```
+
+باشد، application می‌تواند آن‌ها را با:
+
+```python
+os.getenv("APP_ENV")
+os.getenv("LLM_MODEL")
+```
+
+بخواند.
+
+---
+
+# 7. مسیر فایل `.env`
+
+اگر `.env` در directory فعلی باشد:
+
+```bash
+--env-file .env
+```
+
+اگر جای دیگری باشد:
+
+```bash
+--env-file ./config/.env
+```
+
+مثلاً در پروژه ما:
+
+```bash
+docker run \
+  --env-file ./fastapi-basic/.env \
+  fastapi-basic
+```
+
+---
+
+# 8. `.gitignore` و `.env`
+
+اگر `.env` شامل secret باشد، نباید آن را به GitHub push کنیم.
+
+در `.gitignore`:
+
+```text
+.env
+```
+
+این یعنی Git فایل `.env` را برای commit نادیده بگیرد.
+
+برای اطمینان:
+
+```bash
+git status
+```
+
+نباید `.env` را به‌عنوان فایل untracked نشان دهد.
+
+---
+
+# 9. `.env.example`
+
+اگر پروژه را با دیگران share کنیم، آن‌ها باید بدانند چه variablesای لازم است.
+
+بنابراین به جای `.env` واقعی، یک:
+
+```text
+.env.example
+```
+
+commit می‌کنیم.
+
+مثلاً:
+
+```env
+APP_ENV=development
+LLM_MODEL=your-model-name
+OPENAI_API_KEY=your-api-key-here
+```
+
+اما secret واقعی داخل آن قرار نمی‌دهیم.
+
+ساختار معمول:
+
+```text
+.env             ← secret/config واقعی، commit نمی‌شود
+.env.example     ← template، commit می‌شود
+```
+
+---
+
+# 10. Environment Variable در FastAPI
+
+FastAPI تفاوت خاصی با Python معمولی ندارد.
+
+مثلاً:
+
+```python
+import os
+
+@app.get("/config")
+def config():
+    return {
+        "environment": os.getenv("APP_ENV", "development"),
+        "llm_model": os.getenv("LLM_MODEL", "not-set")
+    }
+```
+
+FastAPI فقط endpoint را فراهم می‌کند؛ `os.getenv()` مقدار configuration را از environment می‌خواند.
+
+---
+
+# 11. یک الگوی بسیار مهم در AI Engineering
+
+مثلاً یک LLM service ممکن است داشته باشد:
+
+```env
+APP_ENV=production
+LLM_MODEL=gpt-5.6-mini
+OPENAI_API_KEY=...
+```
+
+و Python:
+
+```python
+import os
+
+model = os.getenv("LLM_MODEL")
+api_key = os.getenv("OPENAI_API_KEY")
+```
+
+پس:
+
+```text
+Environment
+     ↓
+Python application
+     ↓
+FastAPI
+     ↓
+LLM API
+```
+
+این الگو را در پروژه‌های واقعی زیاد خواهی دید.
+
+---
+
+# 12. Secret را هیچ‌وقت داخل code نگذار
+
+❌ بد:
+
+```python
+api_key = "sk-xxxxxxxx"
+```
+
+❌ بد:
+
+```dockerfile
+ENV OPENAI_API_KEY=sk-xxxxxxxx
+```
+
+❌ بد:
+
+```text
+.env
+```
+
+و بعد commit کردن آن به GitHub.
+
+✅ بهتر:
+
+```python
+api_key = os.getenv("OPENAI_API_KEY")
+```
+
+و secret را هنگام اجرای application/container فراهم کنیم.
+
+---
+
+# 13. `ENV` در Dockerfile چیست؟
+
+Dockerfile هم می‌تواند `ENV` داشته باشد:
+
+```dockerfile
+ENV APP_ENV=production
+```
+
+این یک default داخل image ایجاد می‌کند.
+
+اما برای configurationهایی که باید بین محیط‌ها تغییر کنند، معمولاً بهتر است مقدار را هنگام اجرای container بدهیم:
+
+```bash
+docker run -e APP_ENV=production my-app
+```
+
+یا:
+
+```bash
+docker run --env-file .env my-app
+```
+
+اصل مهم:
+
+```text
+Code/Image
+    +
+Configuration
+    ↓
+Running application
+```
+
+یعنی configuration را تا حد امکان از code جدا نگه می‌داریم.
+
+---
+
+# 14. `os` یا `pathlib`؟
+
+برای filesystem بهتر است در Python تا حد امکان از:
+
+```python
+from pathlib import Path
+```
+
+استفاده کنیم.
+
+مثلاً:
+
+```python
+BASE_DIR = Path(__file__).resolve().parent
+```
+
+اما برای environment variables استفاده از:
+
+```python
+import os
+
+os.getenv("APP_ENV")
+```
+
+کاملاً استاندارد و مناسب است.
+
+لازم نیست برای این موضوع abstraction پیچیده‌ای بسازیم.
+
+---
+
+# 15. مهم‌ترین دستورات این بخش
+
+### تعریف هنگام اجرای container
+
+```bash
+docker run -e APP_ENV=production my-app
+```
+
+`-e` = `--env`
+
+---
+
+### استفاده از فایل
+
+```bash
+docker run --env-file .env my-app
+```
+
+`--env-file` = environment variableها را از فایل بخوان.
+
+---
+
+### خواندن در Python
+
+```python
+os.getenv("APP_ENV")
+```
+
+---
+
+### مقدار پیش‌فرض
+
+```python
+os.getenv("APP_ENV", "development")
+```
+
+---
+
+### جلوگیری از commit شدن secret
+
+```text
+.env
+```
+
+داخل `.gitignore`.
+
+---
+
+## خلاصه
+
+برای Practical AI Engineering فعلاً همین مدل را به خاطر بسپار:
+
+```text
+.env
+  ↓
+Docker --env-file
+  ↓
+Container environment
+  ↓
+os.getenv()
+  ↓
+FastAPI / AI application
+  ↓
+LLM / Database / External API
+```
+
+و مهم‌ترین اصل:
+
+> **Configuration و secrets را از source code جدا نگه دار.**
+
+برای مسیر فعلی تو همین سطح از Environment Variables کافی است. جزئیات پیشرفته‌تر مثل secret managers، Vault، Kubernetes Secrets و configuration frameworks فعلاً **🔴 Ignore** هستند.
