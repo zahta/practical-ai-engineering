@@ -50,3 +50,11 @@ def analyze(request: AnalyzeRequest):
 		"length": len(request.text),
 		"message": "Text received successfully!",
 	}
+
+
+@app.get("/config")
+def config():
+	return {
+		"environment": os.getenv("APP_ENV", "development"),
+		"llm_model": os.getenv("LLM_MODEL", "not-set"),
+	}
