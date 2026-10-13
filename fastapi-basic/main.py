@@ -48,7 +48,7 @@ def search_users(name:str, age:int | None = None):
 @app.post("/analyze")
 async def analyze(request: AnalyzeRequest):
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 "http://ai-service:8000/analyze",
                 json={"text": request.text},

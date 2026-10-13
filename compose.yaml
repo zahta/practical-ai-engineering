@@ -13,6 +13,10 @@ services:
   ai-service:
     build: ./ai-service
     container_name: ai-service
+    environment:
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      OLLAMA_MODEL: "qwen2.5:7b"
+      OLLAMA_TIMEOUT: "120"
 
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
