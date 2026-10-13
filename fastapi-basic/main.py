@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 
@@ -43,13 +44,38 @@ def search_users(name:str, age:int | None = None):
 	}
 
 
+
 @app.post("/analyze")
-def analyze(request: AnalyzeRequest):
-	return {
-		"text": request.text,
-		"length": len(request.text),
-		"message": "Text received successfully!",
-	}
+async def analyze(request: AnalyzeRequest):
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(
+                "http://ai-service:8000/analyze",
+                json={"text": request.text},
+            )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="AI service timed out",
+        )
+
+    except httpx.HTTPStatusError:
+        raise HTTPException(
+            status_code=502,
+            detail="AI service returned an error",
+        )
+
+    except httpx.RequestError:
+        raise HTTPException(
+            status_code=503,
+            detail="AI service is unavailable",
+        )
+
 
 
 @app.get("/config")
